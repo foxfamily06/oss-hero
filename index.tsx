@@ -288,6 +288,10 @@ const runApp = () => {
     function renderReport() {
         const contentEl = document.getElementById('report-content')!;
         document.getElementById('current-month-label')!.textContent = currentReportDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+        
+        const todayMonthBtn = document.getElementById('goto-current-month-btn') as HTMLButtonElement;
+        const today = new Date();
+        todayMonthBtn.disabled = today.getFullYear() === currentReportDate.getFullYear() && today.getMonth() === currentReportDate.getMonth();
 
         const year = currentReportDate.getFullYear();
         const month = currentReportDate.getMonth();
@@ -475,6 +479,7 @@ const runApp = () => {
     document.getElementById('goto-today-btn')!.addEventListener('click', () => { currentDate = new Date(); renderWeek(); });
     document.getElementById('prev-month')!.addEventListener('click', () => { currentReportDate.setMonth(currentReportDate.getMonth() - 1); renderReport(); });
     document.getElementById('next-month')!.addEventListener('click', () => { currentReportDate.setMonth(currentReportDate.getMonth() + 1); renderReport(); });
+    document.getElementById('goto-current-month-btn')!.addEventListener('click', () => { currentReportDate = new Date(); renderReport(); });
 
     document.getElementById('delete-week-btn')!.addEventListener('click', () => {
         const weekStart = getWeekStart(currentDate);
