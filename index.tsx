@@ -609,7 +609,6 @@ const runApp = () => {
             const end = minutesToTime(suggestedStartTime + slotDuration);
             (document.getElementById('start-time') as HTMLInputElement).value = start;
             (document.getElementById('end-time') as HTMLInputElement).value = end;
-            showToast("Orario suggerito!");
         } else {
             showToast("Non ho trovato uno slot da 1 ora.", true);
         }
