@@ -185,6 +185,14 @@ const runApp = () => {
             const dayAppointments = appointments
                 .filter(a => a.date === dateStr)
                 .sort((a, b) => a.startTime.localeCompare(b.startTime));
+            
+            const totalDayHours = dayAppointments.reduce((sum, a) => sum + (a.duration || 0), 0);
+            
+            const dailyHoursIndicator = `
+                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 font-bold text-sm cursor-default select-none" title="Ore totali per la giornata: ${totalDayHours.toFixed(2)}">
+                    ${totalDayHours.toFixed(1)}
+                </div>
+            `;
 
             const holiday = getItalianHoliday(dayDate);
             let holidayText = holiday ? `<span class="font-normal text-sm ml-2">(${holiday})</span>` : '';
@@ -197,9 +205,12 @@ const runApp = () => {
                         <h3 class="text-lg font-bold ${dayClass}">${weekdays[i]} ${holidayText}</h3>
                         <p class="text-sm text-gray-500">${dayDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</p>
                     </div>
-                     <button class="add-appointment-btn p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors" data-date="${dateStr}" aria-label="Aggiungi appuntamento per ${weekdays[i]}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                    </button>
+                     <div class="flex items-center gap-2">
+                        ${dailyHoursIndicator}
+                        <button class="add-appointment-btn p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors" data-date="${dateStr}" aria-label="Aggiungi appuntamento per ${weekdays[i]}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="appointments-list space-y-1" id="list-${dateStr}">
                     ${dayAppointments.length > 0 ? dayAppointments.map(renderAppointment).join('') : '<p class="text-center text-gray-500 italic py-4">Nessun appuntamento.</p>'}
@@ -226,9 +237,8 @@ const runApp = () => {
                     </svg>
                 </button>
                 <div class="py-3 px-4 pr-10 flex items-baseline gap-4">
-                    <div class="w-36 shrink-0 flex justify-between items-baseline">
+                    <div class="w-24 shrink-0">
                         <p class="font-semibold text-gray-700 text-xs whitespace-nowrap">${app.startTime} - ${app.endTime}</p>
-                        <span class="font-semibold text-gray-500 text-xs">${app.duration.toFixed(2)} ore</span>
                     </div>
                     <div class="flex-grow">
                         <p class="font-bold text-base">${patient ? patient.name : 'Paziente non trovato'}</p>
