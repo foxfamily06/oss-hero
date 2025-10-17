@@ -171,8 +171,11 @@ const runApp = () => {
         
         document.getElementById('current-week-label')!.innerHTML = `
             <div>${weekStart.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} - ${weekEndDisplay.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-            <div class="text-sm font-normal text-gray-500 mt-1">Ore pianificate: <span class="font-semibold">${totalWeekHours.toFixed(2)}</span></div>
         `;
+        
+        const totalWeekHoursIndicator = document.getElementById('total-week-hours-indicator')!;
+        totalWeekHoursIndicator.textContent = totalWeekHours.toFixed(1);
+        totalWeekHoursIndicator.setAttribute('title', `Ore totali pianificate per la settimana: ${totalWeekHours.toFixed(2)}`);
 
         weekContainer.innerHTML = '';
         const weekdays = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
