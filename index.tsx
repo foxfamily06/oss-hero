@@ -189,7 +189,7 @@ const runApp = () => {
             const totalDayHours = dayAppointments.reduce((sum, a) => sum + (a.duration || 0), 0);
             
             const dailyHoursIndicator = `
-                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 font-bold text-sm cursor-default select-none" title="Ore totali per la giornata: ${totalDayHours.toFixed(2)}">
+                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-gray-100 text-gray-400 font-bold text-sm cursor-default select-none border border-gray-400" title="Ore totali per la giornata: ${totalDayHours.toFixed(2)}">
                     ${totalDayHours.toFixed(1)}
                 </div>
             `;
