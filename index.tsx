@@ -230,20 +230,16 @@ const runApp = () => {
         const typeClass = typeColors[app.type] || 'bg-gray-100 text-gray-800 border-l-gray-500';
         const patient = patients.find(p => p.id === app.patientId);
         return `
-            <div class="appointment-item cursor-pointer relative border-l-4 ${typeClass}" data-id="${app.id}">
+            <div class="appointment-item cursor-pointer relative border-l-4 ${typeClass} grid grid-cols-[auto_1fr] gap-x-4 items-baseline" data-id="${app.id}">
                 <button class="quick-delete-btn absolute top-2 right-2 p-1 rounded-full hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors z-10" data-id="${app.id}" aria-label="Elimina appuntamento">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                     </svg>
                 </button>
-                <div class="py-3 px-4 pr-10 flex items-baseline gap-4">
-                    <div class="w-24 shrink-0">
-                        <p class="font-semibold text-gray-700 text-xs whitespace-nowrap">${app.startTime} - ${app.endTime}</p>
-                    </div>
-                    <div class="flex-grow">
-                        <p class="font-bold text-base">${patient ? patient.name : 'Paziente non trovato'}</p>
-                        ${app.notes ? `<p class="text-sm text-gray-500 mt-2 pt-2 border-t border-gray-200 flex items-start gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg><span>${app.notes}</span></p>` : ''}
-                    </div>
+                <p class="py-3 pl-4 font-mono font-semibold text-gray-700 text-sm whitespace-nowrap">${app.startTime} - ${app.endTime}</p>
+                <div class="py-3 pr-10">
+                    <p class="font-bold text-base break-words">${patient ? patient.name : 'Paziente non trovato'}</p>
+                    ${app.notes ? `<p class="text-sm text-gray-500 mt-2 pt-2 border-t border-gray-200 flex items-start gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg><span>${app.notes}</span></p>` : ''}
                 </div>
             </div>
         `;
