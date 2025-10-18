@@ -271,9 +271,15 @@
                 <span>Nuovo Paziente</span>
             </h3>
             <form id="patient-form">
-                <div>
-                    <label for="patient-name" class="block text-sm font-medium text-gray-700">Nome Paziente</label>
-                    <input type="text" id="patient-name" required class="mt-1 block w-full bg-white border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Es. Mario Rossi">
+                <div class="space-y-4">
+                    <div>
+                        <label for="patient-lastname" class="block text-sm font-medium text-gray-700">Cognome</label>
+                        <input type="text" id="patient-lastname" required class="mt-1 block w-full bg-white border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Es. Rossi">
+                    </div>
+                    <div>
+                        <label for="patient-firstname" class="block text-sm font-medium text-gray-700">Nome</label>
+                        <input type="text" id="patient-firstname" required class="mt-1 block w-full bg-white border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Es. Mario">
+                    </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancel-patient" class="btn-secondary">Annulla</button>

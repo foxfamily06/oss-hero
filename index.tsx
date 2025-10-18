@@ -17,7 +17,8 @@ interface Appointment {
 }
 interface Patient {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
 }
 
 const runApp = () => {
@@ -45,6 +46,11 @@ const runApp = () => {
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         return `${year}-${month}-${day}`;
+    };
+
+    const formatPatientName = (patient: Patient | undefined): string => {
+        if (!patient) return 'Paziente non trovato';
+        return `${patient.lastName} ${patient.firstName}`.trim();
     };
 
     const getWeekStart = (date: Date): Date => {
@@ -106,22 +112,41 @@ const runApp = () => {
 
     const loadData = () => {
         const storedAppointments = localStorage.getItem(APPOINTMENTS_KEY);
-        const storedPatients = localStorage.getItem(PATIENTS_KEY);
-
         if (storedAppointments) {
             appointments = JSON.parse(storedAppointments);
         }
 
+        const storedPatients = localStorage.getItem(PATIENTS_KEY);
         if (storedPatients) {
-            patients = JSON.parse(storedPatients);
+            const loadedPatients: any[] = JSON.parse(storedPatients);
+            // Check if migration is needed by looking for the old 'name' property.
+            if (loadedPatients.length > 0 && loadedPatients[0].name !== undefined) {
+                patients = loadedPatients.map(p => {
+                    if (p.name === 'Corsi e riunioni') {
+                        return { id: p.id, firstName: '', lastName: 'Corsi e riunioni' };
+                    }
+                    const parts = (p.name || '').split(' ').filter(Boolean);
+                    const firstName = parts.shift() || '';
+                    const lastName = parts.join(' ');
+                    return { id: p.id, firstName, lastName };
+                });
+                saveData(); // Save migrated data
+                showToast('Dati pazienti aggiornati al nuovo formato.');
+            } else {
+                patients = loadedPatients;
+            }
         } else {
             // First time loading, seed the special patient
-            const initialPatientNames = ['Corsi e riunioni'];
-            patients = initialPatientNames.map(name => ({ id: Date.now().toString() + Math.random().toString(), name }));
+            patients = [{
+                id: Date.now().toString() + Math.random().toString(),
+                firstName: '',
+                lastName: 'Corsi e riunioni'
+            }];
             saveData();
             showToast('Paziente "Corsi e riunioni" aggiunto.');
         }
     };
+
 
     // --- VIEW MANAGEMENT ---
     const showView = (viewId: string) => {
@@ -241,7 +266,7 @@ const runApp = () => {
                 </button>
                 <p class="py-3 pl-4 font-mono font-semibold text-gray-700 text-sm whitespace-nowrap">${app.startTime} - ${app.endTime}</p>
                 <div class="py-3 pr-10">
-                    <p class="font-bold text-base break-words">${patient ? patient.name : 'Paziente non trovato'}</p>
+                    <p class="font-bold text-base break-words">${formatPatientName(patient)}</p>
                     ${app.notes ? `<p class="text-sm text-gray-500 mt-2 pt-2 border-t border-gray-200 flex items-start gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg><span>${app.notes}</span></p>` : ''}
                 </div>
             </div>
@@ -258,7 +283,11 @@ const runApp = () => {
 
         const todayStr = formatDate(new Date());
 
-        [...patients].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
+        [...patients].sort((a,b) => {
+            const lastNameComp = a.lastName.localeCompare(b.lastName);
+            if (lastNameComp !== 0) return lastNameComp;
+            return a.firstName.localeCompare(b.firstName);
+        }).forEach(p => {
             const patientEl = document.createElement('div');
             patientEl.className = 'card flex justify-between items-center';
             
@@ -272,8 +301,8 @@ const runApp = () => {
                 lastVisitHtml = `<span class="text-xs text-gray-500 mt-1 block">Ultima visita: ${formattedDate}</span>`;
             }
 
-            const deleteButtonHtml = p.name !== 'Corsi e riunioni'
-                ? `<button class="delete-patient-btn p-2 rounded-full hover:bg-red-100 text-red-500" data-id="${p.id}" data-name="${p.name}" aria-label="Elimina paziente ${p.name}">
+            const deleteButtonHtml = !(p.lastName === 'Corsi e riunioni' && p.firstName === '')
+                ? `<button class="delete-patient-btn p-2 rounded-full hover:bg-red-100 text-red-500" data-id="${p.id}" aria-label="Elimina paziente ${formatPatientName(p)}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                 </button>`
                 : '';
@@ -282,7 +311,7 @@ const runApp = () => {
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 self-start shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                     <div>
-                        <span class="font-medium">${p.name}</span>
+                        <span class="font-medium">${formatPatientName(p)}</span>
                         ${lastVisitHtml}
                     </div>
                 </div>
@@ -318,7 +347,8 @@ const runApp = () => {
         }, {} as Record<AppointmentType, number>);
 
         const totalsByPatient = monthAppointments.reduce((acc, curr) => {
-            const patientName = patients.find(p => p.id === curr.patientId)?.name || "Sconosciuto";
+            const patient = patients.find(p => p.id === curr.patientId);
+            const patientName = formatPatientName(patient);
             acc[patientName] = (acc[patientName] || 0) + curr.duration;
             return acc;
         }, {} as Record<string, number>);
@@ -373,8 +403,12 @@ const runApp = () => {
         
         const patientSelect = document.getElementById('patient-select') as HTMLSelectElement;
         patientSelect.innerHTML = '<option value="">Seleziona un paziente...</option>';
-        [...patients].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
-            patientSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+        [...patients].sort((a,b) => {
+            const lastNameComp = a.lastName.localeCompare(b.lastName);
+            if (lastNameComp !== 0) return lastNameComp;
+            return a.firstName.localeCompare(b.firstName);
+        }).forEach(p => {
+            patientSelect.innerHTML += `<option value="${p.id}">${formatPatientName(p)}</option>`;
         });
 
         if (appointment) {
@@ -443,7 +477,7 @@ const runApp = () => {
             }
             showToast('Appuntamento aggiornato!');
         } else {
-            const newAppointment: Appointment = { ...appointmentData, id: Date.now().toString() };
+            const newAppointment: Appointment = { ...appointmentData, id: Date.now().toString() + Math.random().toString() };
             appointments.push(newAppointment);
             showToast('Appuntamento salvato!');
         }
@@ -457,8 +491,8 @@ const runApp = () => {
          const id = (document.getElementById('appointment-id') as HTMLInputElement).value;
          if (!id) return;
          const app = appointments.find(a => a.id === id);
-         const patientName = patients.find(p => p.id === app?.patientId)?.name || 'sconosciuto';
-         openConfirmModal(`Sei sicuro di voler eliminare questo appuntamento con ${patientName}?`, () => {
+         const patient = patients.find(p => p.id === app?.patientId);
+         openConfirmModal(`Sei sicuro di voler eliminare questo appuntamento con ${formatPatientName(patient)}?`, () => {
             appointments = appointments.filter(a => a.id !== id);
             saveData();
             showToast('Appuntamento eliminato.');
@@ -470,9 +504,25 @@ const runApp = () => {
 
     patientForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const name = (document.getElementById('patient-name') as HTMLInputElement).value.trim();
-        if (name) {
-            const newPatient: Patient = { id: Date.now().toString(), name };
+        const firstName = (document.getElementById('patient-firstname') as HTMLInputElement).value.trim();
+        const lastName = (document.getElementById('patient-lastname') as HTMLInputElement).value.trim();
+
+        if (firstName && lastName) {
+            const existingPatient = patients.find(p =>
+                p.firstName.toLowerCase() === firstName.toLowerCase() &&
+                p.lastName.toLowerCase() === lastName.toLowerCase()
+            );
+
+            if (existingPatient) {
+                showToast('Un paziente con lo stesso nome e cognome esiste già.', true);
+                return;
+            }
+
+            const newPatient: Patient = {
+                id: Date.now().toString() + Math.random().toString(),
+                firstName,
+                lastName
+            };
             patients.push(newPatient);
             saveData();
             showToast('Paziente aggiunto!');
@@ -524,8 +574,8 @@ const runApp = () => {
             e.stopPropagation(); 
             const id = quickDeleteBtn.dataset.id!;
             const app = appointments.find(a => a.id === id);
-            const patientName = patients.find(p => p.id === app?.patientId)?.name || 'sconosciuto';
-            openConfirmModal(`Vuoi cancellare l'appuntamento con ${patientName}?`, () => {
+            const patient = patients.find(p => p.id === app?.patientId);
+            openConfirmModal(`Vuoi cancellare l'appuntamento con ${formatPatientName(patient)}?`, () => {
                 appointments = appointments.filter(a => a.id !== id);
                 saveData();
                 showToast('Appuntamento eliminato.');
@@ -547,12 +597,15 @@ const runApp = () => {
         
         const deletePatientBtn = target.closest<HTMLElement>('.delete-patient-btn');
         if(deletePatientBtn instanceof HTMLElement) {
-            const { id, name } = deletePatientBtn.dataset;
+            const { id } = deletePatientBtn.dataset;
+            if (!id) return;
+            const patientToDelete = patients.find(p => p.id === id);
+            if (!patientToDelete) return;
             
-            if (name === 'Corsi e riunioni') return; // Safety check
+            if (patientToDelete.lastName === 'Corsi e riunioni' && patientToDelete.firstName === '') return; // Safety check
 
             const appCount = appointments.filter(a => a.patientId === id).length;
-            let msg = `Sei sicuro di voler eliminare "${name}"?`;
+            let msg = `Sei sicuro di voler eliminare "${formatPatientName(patientToDelete)}"?`;
             if(appCount > 0) msg += `\n\nATTENZIONE: Ci sono ${appCount} appuntamenti associati. L'eliminazione del paziente NON eliminerà i suoi appuntamenti.`;
 
             openConfirmModal(msg, () => {
