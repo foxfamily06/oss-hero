@@ -189,6 +189,9 @@ const runApp = () => {
             return a.date >= startStr && a.date <= endStr;
         });
 
+        const copyWeekBtn = document.getElementById('copy-week-btn') as HTMLButtonElement;
+        copyWeekBtn.disabled = weekAppointments.length > 0;
+
         const deleteWeekBtn = document.getElementById('delete-week-btn') as HTMLButtonElement;
         deleteWeekBtn.disabled = weekAppointments.length === 0;
 
@@ -390,6 +393,7 @@ const runApp = () => {
     const patientModal = document.getElementById('patient-modal')!;
     const patientForm = document.getElementById('patient-form') as HTMLFormElement;
     const confirmModal = document.getElementById('confirm-modal')!;
+    const copyWeekModal = document.getElementById('copy-week-modal')!;
     let confirmCallback: (() => void) | null = null;
     
     const openAppointmentModal = (appointment: Appointment | null = null, date: string | null = null) => {
@@ -442,6 +446,11 @@ const runApp = () => {
         confirmCallback = onConfirm;
         confirmModal.classList.remove('hidden');
         setTimeout(()=> confirmModal.querySelector('.modal-content')!.classList.add('scale-100'), 10);
+    };
+
+    const openCopyWeekModal = () => {
+        copyWeekModal.classList.remove('hidden');
+        setTimeout(()=> copyWeekModal.querySelector('.modal-content')!.classList.add('scale-100'), 10);
     };
     
     // --- EVENT LISTENERS ---
@@ -536,6 +545,7 @@ const runApp = () => {
     document.getElementById('prev-month')!.addEventListener('click', () => { currentReportDate.setMonth(currentReportDate.getMonth() - 1); renderReport(); });
     document.getElementById('next-month')!.addEventListener('click', () => { currentReportDate.setMonth(currentReportDate.getMonth() + 1); renderReport(); });
     document.getElementById('goto-current-month-btn')!.addEventListener('click', () => { currentReportDate = new Date(); renderReport(); });
+    document.getElementById('copy-week-btn')!.addEventListener('click', openCopyWeekModal);
 
     document.getElementById('delete-week-btn')!.addEventListener('click', () => {
         const weekStart = getWeekStart(currentDate);
@@ -662,6 +672,55 @@ const runApp = () => {
         }
     });
 
+    document.getElementById('copy-week-options')!.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const button = target.closest<HTMLButtonElement>('[data-weeks-ago]');
+
+        if (!button) return;
+
+        const weeksAgo = parseInt(button.dataset.weeksAgo!, 10);
+        if (isNaN(weeksAgo)) return;
+
+        const targetWeekStart = getWeekStart(currentDate);
+
+        const sourceWeekStart = new Date(targetWeekStart);
+        sourceWeekStart.setDate(sourceWeekStart.getDate() - (7 * weeksAgo));
+        const sourceWeekEnd = new Date(sourceWeekStart);
+        sourceWeekEnd.setDate(sourceWeekStart.getDate() + 6);
+        
+        const sourceStartStr = formatDate(sourceWeekStart);
+        const sourceEndStr = formatDate(sourceWeekEnd);
+
+        const sourceAppointments = appointments.filter(a => a.date >= sourceStartStr && a.date <= sourceEndStr);
+
+        if (sourceAppointments.length === 0) {
+            showToast(`Nessun appuntamento trovato ${weeksAgo === 1 ? 'la settimana scorsa' : `${weeksAgo} settimane fa`}.`, true);
+            closeModal(copyWeekModal);
+            return;
+        }
+        
+        const newAppointments: Appointment[] = sourceAppointments.map(sourceApp => {
+            const sourceAppDate = new Date(sourceApp.date + 'T00:00:00');
+            const dayOffset = Math.round((sourceAppDate.getTime() - sourceWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+            
+            const newAppDate = new Date(targetWeekStart);
+            newAppDate.setDate(targetWeekStart.getDate() + dayOffset);
+
+            return {
+                ...sourceApp,
+                id: Date.now().toString() + Math.random().toString(),
+                date: formatDate(newAppDate)
+            };
+        });
+
+        appointments.push(...newAppointments);
+        saveData();
+        closeModal(copyWeekModal);
+        renderWeek();
+        renderReport();
+        showToast(`${newAppointments.length} appuntamenti copiati con successo!`);
+    });
+
     navButtons.forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view!)));
     document.getElementById('add-patient-btn-view')!.addEventListener('click', openPatientModal);
     
@@ -672,6 +731,8 @@ const runApp = () => {
     document.getElementById('cancel-confirm')!.addEventListener('click', () => closeModal(confirmModal));
     document.getElementById('confirm-action')!.addEventListener('click', () => { confirmCallback?.(); closeModal(confirmModal); });
     confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) closeModal(confirmModal); });
+    document.getElementById('cancel-copy-week')!.addEventListener('click', () => closeModal(copyWeekModal));
+    copyWeekModal.addEventListener('click', (e) => { if (e.target === copyWeekModal) closeModal(copyWeekModal); });
     
     // --- APP START ---
     loadData();
