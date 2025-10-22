@@ -547,6 +547,41 @@ const runApp = () => {
     document.getElementById('goto-current-month-btn')!.addEventListener('click', () => { currentReportDate = new Date(); renderReport(); });
     document.getElementById('copy-week-btn')!.addEventListener('click', openCopyWeekModal);
 
+    document.getElementById('export-data-btn')!.addEventListener('click', () => {
+        try {
+            const allData = {
+                patients: patients,
+                appointments: appointments,
+            };
+            const dataStr = JSON.stringify(allData, null, 2); // Pretty print for readability
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const now = new Date();
+            const year = now.getFullYear().toString().slice(-2);
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            const fileName = `oss-hero-${year}${month}${day}-${hours}${minutes}${seconds}.json`;
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Dati esportati con successo!');
+        } catch (error) {
+            console.error('Errore durante l\'esportazione dei dati:', error);
+            showToast('Si è verificato un errore durante l\'esportazione.', true);
+        }
+    });
+
     document.getElementById('delete-week-btn')!.addEventListener('click', () => {
         const weekStart = getWeekStart(currentDate);
         const weekEnd = new Date(weekStart);
