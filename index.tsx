@@ -582,6 +582,68 @@ const runApp = () => {
         }
     });
 
+    const importLoadingOverlay = document.getElementById('import-loading-overlay')!;
+    const importFileInput = document.getElementById('import-file-input') as HTMLInputElement;
+
+    document.getElementById('import-data-btn')!.addEventListener('click', () => {
+        importFileInput.click();
+    });
+
+    importFileInput.addEventListener('change', (event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        const confirmationMessage = "Sei sicuro di voler importare questo file? TUTTI i dati attuali verranno SOSTITUITI. Questa operazione non è reversibile.";
+        
+        openConfirmModal(confirmationMessage, () => {
+            handleImport(file);
+        });
+
+        // Reset the input value to allow selecting the same file again
+        importFileInput.value = '';
+    });
+    
+    const handleImport = (file: File) => {
+        importLoadingOverlay.classList.remove('hidden');
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            setTimeout(() => { // Simulate a small delay for better UX
+                try {
+                    const text = e.target?.result as string;
+                    const data = JSON.parse(text);
+
+                    if (Array.isArray(data.patients) && Array.isArray(data.appointments)) {
+                        patients = data.patients;
+                        appointments = data.appointments;
+                        saveData();
+                        showToast('Dati importati con successo!');
+                        // Re-render everything
+                        renderWeek();
+                        renderPatients();
+                        renderReport();
+                    } else {
+                        throw new Error("Invalid file structure.");
+                    }
+                } catch (error) {
+                    console.error('Errore durante l\'importazione dei dati:', error);
+                    showToast('File non valido o corrotto. Il formato non è corretto.', true);
+                } finally {
+                    importLoadingOverlay.classList.add('hidden');
+                }
+            }, 500);
+        };
+        
+        reader.onerror = () => {
+             setTimeout(() => {
+                showToast('Si è verificato un errore durante la lettura del file.', true);
+                importLoadingOverlay.classList.add('hidden');
+             }, 500);
+        };
+
+        reader.readAsText(file);
+    };
+
     document.getElementById('delete-week-btn')!.addEventListener('click', () => {
         const weekStart = getWeekStart(currentDate);
         const weekEnd = new Date(weekStart);
