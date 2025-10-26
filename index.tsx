@@ -1,3 +1,5 @@
+
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -204,6 +206,21 @@ const runApp = () => {
         const totalWeekHoursIndicator = document.getElementById('total-week-hours-indicator')!;
         totalWeekHoursIndicator.textContent = totalWeekHours.toFixed(1);
         totalWeekHoursIndicator.setAttribute('title', `Ore totali pianificate per la settimana: ${totalWeekHours.toFixed(2)}`);
+
+        // Dynamically change color based on hours
+        totalWeekHoursIndicator.classList.remove(
+            'bg-gray-100', 'text-gray-600', 'border-gray-300',
+            'bg-green-100', 'text-green-600', 'border-green-400',
+            'bg-red-100', 'text-red-600', 'border-red-400'
+        );
+
+        if (totalWeekHours > 30) { // Over 30 hours
+            totalWeekHoursIndicator.classList.add('bg-red-100', 'text-red-600', 'border-red-400');
+        } else if (totalWeekHours > 0) { // From 1 to 30 hours
+            totalWeekHoursIndicator.classList.add('bg-green-100', 'text-green-600', 'border-green-400');
+        } else { // Empty week
+            totalWeekHoursIndicator.classList.add('bg-gray-100', 'text-gray-600', 'border-gray-300');
+        }
 
         weekContainer.innerHTML = '';
         const weekdays = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
