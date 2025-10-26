@@ -2,10 +2,10 @@
 
 const CACHE_NAME = 'oss-hero-cache-v2';
 const URLS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/index.tsx',
-  '/index.css',
+  './',
+  './index.html',
+  './index.js',
+  './index.css',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
