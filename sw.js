@@ -1,12 +1,11 @@
 // sw.js
 
-const CACHE_NAME = 'oss-hero-cache-v1';
+const CACHE_NAME = 'oss-hero-cache-v2';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
   '/index.tsx',
   '/index.css',
-  'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
@@ -31,7 +30,11 @@ self.addEventListener('fetch', event => {
           return response;
         }
         // Altrimenti, la richiede dalla rete
-        return fetch(event.request);
+        return fetch(event.request).catch(() => {
+          // Gestione offline per le richieste non in cache (es. API)
+          // In questo caso, per le richieste di navigazione non in cache, non facciamo nulla
+          // Potrebbe essere utile restituire una pagina offline generica qui se necessario
+        });
       }
     )
   );
