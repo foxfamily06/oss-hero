@@ -275,9 +275,7 @@ const runApp = () => {
              listEl.innerHTML = `<p class="text-gray-500 italic px-2">Nessun paziente aggiunto.</p>`;
              return;
         }
-
-        const todayStr = formatDate(new Date());
-
+    
         [...patients].sort((a,b) => {
             const lastNameComp = a.lastName.localeCompare(b.lastName);
             if (lastNameComp !== 0) return lastNameComp;
@@ -286,16 +284,18 @@ const runApp = () => {
             const patientEl = document.createElement('div');
             patientEl.className = 'card flex justify-between items-center';
             
-            const patientAppointments = appointments.filter(a => a.patientId === p.id && a.date <= todayStr);
-            let lastVisitHtml = '<span class="text-xs text-gray-500 mt-1 block">Nessuna visita passata</span>';
+            const patientAppointments = appointments
+                .filter(a => a.patientId === p.id)
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            let visitHtml = '<span class="text-xs text-gray-500 mt-1 block">Nessuna visita registrata</span>';
             if (patientAppointments.length > 0) {
-                patientAppointments.sort((a, b) => b.date.localeCompare(a.date));
                 const lastDate = patientAppointments[0].date;
                 const [year, month, day] = lastDate.split('-');
                 const formattedDate = `${day}/${month}/${year}`;
-                lastVisitHtml = `<span class="text-xs text-gray-500 mt-1 block">Ultima visita: ${formattedDate}</span>`;
+                visitHtml = `<span class="text-xs text-gray-500 mt-1 block">Ultima visita: ${formattedDate}</span>`;
             }
-
+    
             const deleteButtonHtml = !(p.lastName === 'Corsi e riunioni' && p.firstName === '')
                 ? `<button class="delete-patient-btn p-2 rounded-full hover:bg-red-100 text-red-500" data-id="${p.id}" aria-label="Elimina paziente ${formatPatientName(p)}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
@@ -307,7 +307,7 @@ const runApp = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 self-start shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                     <div>
                         <span class="font-medium">${formatPatientName(p)}</span>
-                        ${lastVisitHtml}
+                        ${visitHtml}
                     </div>
                 </div>
                 ${deleteButtonHtml}
@@ -707,62 +707,94 @@ const runApp = () => {
     });
 
     document.getElementById('suggest-time-btn').addEventListener('click', () => {
-        const date = document.getElementById('appointment-date').value;
+        const dateInput = document.getElementById('appointment-date');
+        const startTimeInput = document.getElementById('start-time');
+        const endTimeInput = document.getElementById('end-time');
+        const date = dateInput.value;
+
         if (!date) {
             showToast("Seleziona prima una data.", true);
             return;
         }
+
         const spinner = document.getElementById('suggest-spinner');
         spinner.classList.remove('hidden');
 
+        // Helper functions to convert between "HH:MM" and total minutes from midnight
         const timeToMinutes = (time) => {
+            if (!time) return 0;
             const [hours, minutes] = time.split(':').map(Number);
             return hours * 60 + minutes;
         };
-    
+
         const minutesToTime = (minutes) => {
             const h = Math.floor(minutes / 60).toString().padStart(2, '0');
             const m = (minutes % 60).toString().padStart(2, '0');
             return `${h}:${m}`;
         };
-    
+
+        // Gather existing appointments and lunch break for the selected day
         const dayAppointments = appointments.filter(a => a.date === date);
         const busySlots = dayAppointments.map(a => ({
             start: timeToMinutes(a.startTime),
             end: timeToMinutes(a.endTime),
         }));
-    
-        busySlots.push({ start: timeToMinutes('12:00'), end: timeToMinutes('14:00') });
+        busySlots.push({ start: timeToMinutes('12:00'), end: timeToMinutes('14:00') }); // Lunch break
         busySlots.sort((a, b) => a.start - b.start);
-    
-        const slotDuration = 60; // 1 hour
+
+        // Define search parameters
         const dayStart = timeToMinutes('08:00');
         const dayEnd = timeToMinutes('18:00');
+        const appointmentDuration = 60; // Fixed 1-hour slots
         let suggestedStartTime = null;
-    
-        let checkTime = dayStart;
-    
-        while (checkTime <= dayEnd - slotDuration) {
-            const slotEnd = checkTime + slotDuration;
-            const conflictingBusySlot = busySlots.find(busy => checkTime < busy.end && slotEnd > busy.start);
-    
-            if (conflictingBusySlot) {
-                checkTime = conflictingBusySlot.end;
-            } else {
+
+        // Determine where to start searching
+        const existingStartTime = startTimeInput.value;
+        let searchStartTime;
+        if (existingStartTime) {
+            // If a time is already present, start searching after the current 1-hour slot ends.
+            searchStartTime = timeToMinutes(existingStartTime) + appointmentDuration;
+        } else {
+            // Otherwise, start at the beginning of the workday.
+            searchStartTime = dayStart;
+        }
+
+        let checkTime = searchStartTime;
+
+        // The search loop: checks every minute for a valid 1-hour slot
+        while (checkTime <= dayEnd - appointmentDuration) {
+            const slotEnd = checkTime + appointmentDuration;
+            
+            // Check if the proposed slot [checkTime, slotEnd] overlaps with any busy slot
+            const isBusy = busySlots.some(busy => 
+                checkTime < busy.end && slotEnd > busy.start
+            );
+
+            if (!isBusy) {
+                // If not busy, we found our slot
                 suggestedStartTime = checkTime;
                 break;
             }
+            
+            // If busy, move to the next minute and check again
+            checkTime++;
         }
-    
+
+        // Hide spinner and update UI with the result
         spinner.classList.add('hidden');
-    
+
         if (suggestedStartTime !== null) {
             const start = minutesToTime(suggestedStartTime);
-            const end = minutesToTime(suggestedStartTime + slotDuration);
-            document.getElementById('start-time').value = start;
-            document.getElementById('end-time').value = end;
+            const end = minutesToTime(suggestedStartTime + appointmentDuration);
+            startTimeInput.value = start;
+            endTimeInput.value = end;
         } else {
-            showToast("Non ho trovato uno slot da 1 ora.", true);
+            // Provide feedback if no slot was found
+            if (existingStartTime) {
+                showToast("Nessun altro slot libero trovato per questa giornata.", true);
+            } else {
+                showToast("Nessuno slot libero di 1 ora trovato per questa giornata.", true);
+            }
         }
     });
 
