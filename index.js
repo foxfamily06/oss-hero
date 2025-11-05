@@ -34,6 +34,12 @@ const runApp = () => {
         if (!patient) return 'Paziente non trovato';
         return `${patient.lastName} ${patient.firstName}`.trim();
     };
+    
+    const timeToMinutes = (time) => {
+        if (!time) return 0;
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours * 60 + minutes;
+    };
 
     const getWeekStart = (date) => {
         const d = new Date(date);
@@ -240,11 +246,35 @@ const runApp = () => {
                         </button>
                     </div>
                 </div>
-                <div class="appointments-list space-y-1" id="list-${dateStr}">
-                    ${dayAppointments.length > 0 ? dayAppointments.map(renderAppointment).join('') : '<p class="text-center text-gray-500 italic py-4">Nessun appuntamento.</p>'}
-                </div>
+                <div class="appointments-list space-y-1" id="list-${dateStr}"></div>
             `;
             weekContainer.appendChild(dayEl);
+            
+            const appointmentsListEl = document.getElementById(`list-${dateStr}`);
+            if (dayAppointments.length > 0) {
+                const contentItems = [];
+                for (let j = 0; j < dayAppointments.length; j++) {
+                    contentItems.push(renderAppointment(dayAppointments[j]));
+
+                    if (j < dayAppointments.length - 1) {
+                        const currentApp = dayAppointments[j];
+                        const nextApp = dayAppointments[j+1];
+                        
+                        const gapStart = currentApp.endTime;
+                        const gapEnd = nextApp.startTime;
+                        
+                        if (gapEnd > gapStart) {
+                            const gapMinutes = timeToMinutes(gapEnd) - timeToMinutes(gapStart);
+                            if (gapMinutes >= 1) {
+                                contentItems.push(renderGap(dateStr, gapStart, gapEnd, gapMinutes));
+                            }
+                        }
+                    }
+                }
+                appointmentsListEl.innerHTML = contentItems.join('');
+            } else {
+                appointmentsListEl.innerHTML = '<p class="text-center text-gray-500 italic py-4">Nessun appuntamento.</p>';
+            }
         }
     }
     
@@ -265,6 +295,25 @@ const runApp = () => {
                     ${app.notes ? `<p class="text-sm text-gray-500 mt-2 pt-2 border-t border-gray-200 flex items-start gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg><span>${app.notes}</span></p>` : ''}
                 </div>
             </div>
+        `;
+    }
+
+    function renderGap(date, startTime, endTime, durationMinutes) {
+        const isLunchBreak = startTime >= '12:00' && endTime <= '14:00';
+        const breakLabel = isLunchBreak ? 'di pausa pranzo' : 'di pausa';
+
+        return `
+            <button class="gap-item w-full flex items-center gap-2 text-gray-500 text-xs hover:bg-blue-50 py-1 px-4 transition-colors rounded-lg"
+                data-date="${date}"
+                data-start-time="${startTime}"
+                data-end-time="${endTime}"
+                aria-label="Aggiungi appuntamento dalle ${startTime} alle ${endTime}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="font-medium whitespace-nowrap">${durationMinutes} min ${breakLabel}</span>
+                <div class="w-full border-t border-dashed border-gray-300"></div>
+            </button>
         `;
     }
 
@@ -393,7 +442,7 @@ const runApp = () => {
     const copyWeekModal = document.getElementById('copy-week-modal');
     let confirmCallback = null;
     
-    const openAppointmentModal = (appointment = null, date = null) => {
+    const openAppointmentModal = (appointment = null, prefillData = null) => {
         appointmentForm.reset();
         document.getElementById('appointment-id').value = '';
         document.querySelector('#modal-title span').textContent = 'Nuovo Appuntamento';
@@ -419,8 +468,16 @@ const runApp = () => {
             document.getElementById('appointment-type').value = appointment.type;
             document.getElementById('appointment-notes').value = appointment.notes || '';
             document.getElementById('delete-appointment').classList.remove('hidden');
-        } else if (date) {
-            document.getElementById('appointment-date').value = date;
+        } else if (prefillData) {
+            if (prefillData.date) {
+                document.getElementById('appointment-date').value = prefillData.date;
+            }
+            if (prefillData.startTime) {
+                document.getElementById('start-time').value = prefillData.startTime;
+            }
+            if (prefillData.endTime) {
+                document.getElementById('end-time').value = prefillData.endTime;
+            }
         }
         
         appointmentModal.classList.remove('hidden');
@@ -670,7 +727,7 @@ const runApp = () => {
         const target = e.target;
 
         const addBtn = target.closest('.add-appointment-btn');
-        if (addBtn) { openAppointmentModal(null, addBtn.dataset.date || null); return; }
+        if (addBtn) { openAppointmentModal(null, { date: addBtn.dataset.date }); return; }
 
         const appointmentCard = target.closest('.appointment-item');
         if (appointmentCard) {
@@ -680,6 +737,13 @@ const runApp = () => {
                 openAppointmentModal(clickedAppointment);
              }
              return;
+        }
+
+        const gapItem = target.closest('.gap-item');
+        if (gapItem) {
+            const { date, startTime, endTime } = gapItem.dataset;
+            openAppointmentModal(null, { date, startTime, endTime });
+            return;
         }
         
         const deletePatientBtn = target.closest('.delete-patient-btn');
@@ -720,67 +784,50 @@ const runApp = () => {
         const spinner = document.getElementById('suggest-spinner');
         spinner.classList.remove('hidden');
 
-        // Helper functions to convert between "HH:MM" and total minutes from midnight
-        const timeToMinutes = (time) => {
-            if (!time) return 0;
-            const [hours, minutes] = time.split(':').map(Number);
-            return hours * 60 + minutes;
-        };
-
         const minutesToTime = (minutes) => {
             const h = Math.floor(minutes / 60).toString().padStart(2, '0');
             const m = (minutes % 60).toString().padStart(2, '0');
             return `${h}:${m}`;
         };
 
-        // Gather existing appointments and lunch break for the selected day
         const dayAppointments = appointments.filter(a => a.date === date);
         const busySlots = dayAppointments.map(a => ({
             start: timeToMinutes(a.startTime),
             end: timeToMinutes(a.endTime),
         }));
-        busySlots.push({ start: timeToMinutes('12:00'), end: timeToMinutes('14:00') }); // Lunch break
+        busySlots.push({ start: timeToMinutes('12:00'), end: timeToMinutes('14:00') });
         busySlots.sort((a, b) => a.start - b.start);
 
-        // Define search parameters
         const dayStart = timeToMinutes('08:00');
         const dayEnd = timeToMinutes('18:00');
-        const appointmentDuration = 60; // Fixed 1-hour slots
+        const appointmentDuration = 60;
         let suggestedStartTime = null;
 
-        // Determine where to start searching
         const existingStartTime = startTimeInput.value;
         let searchStartTime;
         if (existingStartTime) {
-            // If a time is already present, start searching after the current 1-hour slot ends.
             searchStartTime = timeToMinutes(existingStartTime) + appointmentDuration;
         } else {
-            // Otherwise, start at the beginning of the workday.
             searchStartTime = dayStart;
         }
 
         let checkTime = searchStartTime;
 
-        // The search loop: checks every minute for a valid 1-hour slot
         while (checkTime <= dayEnd - appointmentDuration) {
             const slotEnd = checkTime + appointmentDuration;
             
-            // Check if the proposed slot [checkTime, slotEnd] overlaps with any busy slot
             const isBusy = busySlots.some(busy => 
                 checkTime < busy.end && slotEnd > busy.start
             );
 
             if (!isBusy) {
-                // If not busy, we found our slot
                 suggestedStartTime = checkTime;
                 break;
             }
             
-            // If busy, move to the next minute and check again
             checkTime++;
         }
 
-        // Hide spinner and update UI with the result
         spinner.classList.add('hidden');
 
         if (suggestedStartTime !== null) {
@@ -789,7 +836,6 @@ const runApp = () => {
             startTimeInput.value = start;
             endTimeInput.value = end;
         } else {
-            // Provide feedback if no slot was found
             if (existingStartTime) {
                 showToast("Nessun altro slot libero trovato per questa giornata.", true);
             } else {
