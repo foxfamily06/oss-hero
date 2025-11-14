@@ -325,6 +325,8 @@ const runApp = () => {
              return;
         }
     
+        const todayStr = formatDate(new Date());
+
         [...patients].sort((a,b) => {
             const lastNameComp = a.lastName.localeCompare(b.lastName);
             if (lastNameComp !== 0) return lastNameComp;
@@ -334,7 +336,7 @@ const runApp = () => {
             patientEl.className = 'card flex justify-between items-center';
             
             const patientAppointments = appointments
-                .filter(a => a.patientId === p.id)
+                .filter(a => a.patientId === p.id && a.date <= todayStr)
                 .sort((a, b) => b.date.localeCompare(a.date));
 
             let visitHtml = '<span class="text-xs text-gray-500 mt-1 block">Nessuna visita registrata</span>';
