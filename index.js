@@ -302,15 +302,21 @@ const runApp = () => {
         const isLunchBreak = startTime >= '12:00' && endTime <= '14:00';
         const breakLabel = isLunchBreak ? 'di pausa pranzo' : 'di pausa';
 
+        const iconSvg = isLunchBreak
+            ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 3v5"/><path d="M12 3v18"/><path d="M6 3v5"/><path d="M18 8a6 6 0 0 1-12 0"/>
+            </svg>`
+            : `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>`;
+
         return `
             <button class="gap-item w-full flex items-center gap-2 text-gray-500 text-xs hover:bg-blue-50 py-1 px-4 transition-colors rounded-lg"
                 data-date="${date}"
                 data-start-time="${startTime}"
                 data-end-time="${endTime}"
                 aria-label="Aggiungi appuntamento dalle ${startTime} alle ${endTime}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                ${iconSvg}
                 <span class="font-medium whitespace-nowrap">${durationMinutes} min ${breakLabel}</span>
                 <div class="w-full border-t border-dashed border-gray-300"></div>
             </button>
