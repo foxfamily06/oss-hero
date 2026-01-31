@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -107,31 +108,30 @@ const runApp = () => {
         const storedPatients = localStorage.getItem(PATIENTS_KEY);
         if (storedPatients) {
             const loadedPatients = JSON.parse(storedPatients);
-            // Check if migration is needed by looking for the old 'name' property.
-            if (loadedPatients.length > 0 && loadedPatients[0].name !== undefined) {
-                patients = loadedPatients.map(p => {
+            // Migrazione automatica: assicura che ogni paziente abbia un campo 'comune'
+            patients = loadedPatients.map(p => {
+                if (p.name !== undefined) {
+                    // Vecchio formato name -> split
                     if (p.name === 'Corsi e riunioni') {
-                        return { id: p.id, firstName: '', lastName: 'Corsi e riunioni' };
+                        return { id: p.id, firstName: '', lastName: 'Corsi e riunioni', comune: p.comune || '' };
                     }
                     const parts = (p.name || '').split(' ').filter(Boolean);
                     const firstName = parts.shift() || '';
                     const lastName = parts.join(' ');
-                    return { id: p.id, firstName, lastName };
-                });
-                saveData(); // Save migrated data
-                showToast('Dati pazienti aggiornati al nuovo formato.');
-            } else {
-                patients = loadedPatients;
-            }
+                    return { id: p.id, firstName, lastName, comune: p.comune || '' };
+                }
+                return { ...p, comune: p.comune || '' };
+            });
+            saveData();
         } else {
             // First time loading, seed the special patient
             patients = [{
                 id: Date.now().toString() + Math.random().toString(),
                 firstName: '',
-                lastName: 'Corsi e riunioni'
+                lastName: 'Corsi e riunioni',
+                comune: 'Sede'
             }];
             saveData();
-            showToast('Paziente "Corsi e riunioni" aggiunto.');
         }
     };
 
@@ -339,7 +339,8 @@ const runApp = () => {
             return a.firstName.localeCompare(b.firstName);
         }).forEach(p => {
             const patientEl = document.createElement('div');
-            patientEl.className = 'card flex justify-between items-center';
+            patientEl.className = 'card flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors patient-card';
+            patientEl.dataset.id = p.id;
             
             const patientAppointments = appointments
                 .filter(a => a.patientId === p.id && a.date <= todayStr)
@@ -354,7 +355,7 @@ const runApp = () => {
             }
     
             const deleteButtonHtml = !(p.lastName === 'Corsi e riunioni' && p.firstName === '')
-                ? `<button class="delete-patient-btn p-2 rounded-full hover:bg-red-100 text-red-500" data-id="${p.id}" aria-label="Elimina paziente ${formatPatientName(p)}">
+                ? `<button class="delete-patient-btn p-2 rounded-full hover:bg-red-100 text-red-500 z-10" data-id="${p.id}" aria-label="Elimina paziente ${formatPatientName(p)}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                 </button>`
                 : '';
@@ -364,6 +365,7 @@ const runApp = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 self-start shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                     <div>
                         <span class="font-medium">${formatPatientName(p)}</span>
+                        <span class="text-xs text-blue-600 block">${p.comune ? p.comune : 'Comune non specificato'}</span>
                         ${visitHtml}
                     </div>
                 </div>
@@ -497,8 +499,33 @@ const runApp = () => {
         setTimeout(()=> modal.classList.add('hidden'), 300);
     };
 
-    const openPatientModal = () => {
+    const openPatientModal = (patientToEdit = null) => {
         patientForm.reset();
+        const idInput = document.getElementById('edit-patient-id');
+        const titleEl = document.getElementById('patient-modal-title').querySelector('span');
+        const submitBtnText = document.getElementById('patient-submit-btn').querySelector('span');
+        const firstNameInput = document.getElementById('patient-firstname');
+        const lastNameInput = document.getElementById('patient-lastname');
+        const comuneInput = document.getElementById('patient-comune');
+
+        if (patientToEdit) {
+            idInput.value = patientToEdit.id;
+            titleEl.textContent = 'Modifica Paziente';
+            submitBtnText.textContent = 'Salva';
+            firstNameInput.value = patientToEdit.firstName;
+            lastNameInput.value = patientToEdit.lastName;
+            comuneInput.value = patientToEdit.comune || '';
+            
+            firstNameInput.disabled = true;
+            lastNameInput.disabled = true;
+        } else {
+            idInput.value = '';
+            titleEl.textContent = 'Nuovo Paziente';
+            submitBtnText.textContent = 'Aggiungi';
+            firstNameInput.disabled = false;
+            lastNameInput.disabled = false;
+        }
+
         patientModal.classList.remove('hidden');
         setTimeout(()=> patientModal.querySelector('.modal-content').classList.add('scale-100'), 10);
     };
@@ -572,32 +599,54 @@ const runApp = () => {
 
     patientForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        const id = document.getElementById('edit-patient-id').value;
         const firstName = document.getElementById('patient-firstname').value.trim();
         const lastName = document.getElementById('patient-lastname').value.trim();
+        const comune = document.getElementById('patient-comune').value.trim();
 
-        if (lastName) { // Only require last name
-            const existingPatient = patients.find(p =>
-                p.firstName.toLowerCase() === firstName.toLowerCase() &&
-                p.lastName.toLowerCase() === lastName.toLowerCase()
-            );
+        if (!comune) {
+            showToast('Il comune di residenza è obbligatorio.', true);
+            return;
+        }
 
-            if (existingPatient) {
-                showToast('Un paziente con lo stesso nome e cognome esiste già.', true);
-                return;
+        if (id) {
+            // Edit mode
+            const index = patients.findIndex(p => p.id === id);
+            if (index > -1) {
+                patients[index].comune = comune;
+                saveData();
+                showToast('Paziente aggiornato!');
+                closeModal(patientModal);
+                renderPatients();
+                renderWeek();
             }
-
-            const newPatient = {
-                id: Date.now().toString() + Math.random().toString(),
-                firstName,
-                lastName
-            };
-            patients.push(newPatient);
-            saveData();
-            showToast('Paziente aggiunto!');
-            closeModal(patientModal);
-            renderPatients();
         } else {
-            showToast('Il cognome è obbligatorio.', true);
+            // New mode
+            if (lastName) {
+                const existingPatient = patients.find(p =>
+                    p.firstName.toLowerCase() === firstName.toLowerCase() &&
+                    p.lastName.toLowerCase() === lastName.toLowerCase()
+                );
+
+                if (existingPatient) {
+                    showToast('Un paziente con lo stesso nome e cognome esiste già.', true);
+                    return;
+                }
+
+                const newPatient = {
+                    id: Date.now().toString() + Math.random().toString(),
+                    firstName,
+                    lastName,
+                    comune
+                };
+                patients.push(newPatient);
+                saveData();
+                showToast('Paziente aggiunto!');
+                closeModal(patientModal);
+                renderPatients();
+            } else {
+                showToast('Il cognome è obbligatorio.', true);
+            }
         }
     });
     
@@ -678,6 +727,8 @@ const runApp = () => {
                     if (Array.isArray(data.patients) && Array.isArray(data.appointments)) {
                         patients = data.patients;
                         appointments = data.appointments;
+                        // Assicuriamo che anche i pazienti importati abbiano il campo comune
+                        patients = patients.map(p => ({ ...p, comune: p.comune || '' }));
                         saveData();
                         showToast('Dati importati con successo!');
                         // Re-render everything
@@ -774,6 +825,16 @@ const runApp = () => {
                 renderPatients();
                 renderWeek(); // Re-render week in case patient names are now "not found"
             });
+            return;
+        }
+
+        const patientCard = target.closest('.patient-card');
+        if (patientCard && !target.closest('.delete-patient-btn')) {
+            const { id } = patientCard.dataset;
+            const patientToEdit = patients.find(p => p.id === id);
+            if (patientToEdit) {
+                openPatientModal(patientToEdit);
+            }
             return;
         }
     });
@@ -902,7 +963,7 @@ const runApp = () => {
     });
 
     navButtons.forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
-    document.getElementById('add-patient-btn-view').addEventListener('click', openPatientModal);
+    document.getElementById('add-patient-btn-view').addEventListener('click', () => openPatientModal());
     
     document.getElementById('cancel-appointment').addEventListener('click', () => closeModal(appointmentModal));
     document.getElementById('cancel-patient').addEventListener('click', () => closeModal(patientModal));
