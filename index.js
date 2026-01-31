@@ -108,10 +108,8 @@ const runApp = () => {
         const storedPatients = localStorage.getItem(PATIENTS_KEY);
         if (storedPatients) {
             const loadedPatients = JSON.parse(storedPatients);
-            // Migrazione automatica: assicura che ogni paziente abbia un campo 'comune'
             patients = loadedPatients.map(p => {
                 if (p.name !== undefined) {
-                    // Vecchio formato name -> split
                     if (p.name === 'Corsi e riunioni') {
                         return { id: p.id, firstName: '', lastName: 'Corsi e riunioni', comune: p.comune || '' };
                     }
@@ -124,7 +122,6 @@ const runApp = () => {
             });
             saveData();
         } else {
-            // First time loading, seed the special patient
             patients = [{
                 id: Date.now().toString() + Math.random().toString(),
                 firstName: '',
@@ -193,18 +190,17 @@ const runApp = () => {
         totalWeekHoursIndicator.textContent = totalWeekHours.toFixed(1);
         totalWeekHoursIndicator.setAttribute('title', `Ore totali pianificate per la settimana: ${totalWeekHours.toFixed(2)}`);
 
-        // Dynamically change color based on hours
         totalWeekHoursIndicator.classList.remove(
             'bg-gray-100', 'text-gray-600', 'border-gray-300',
             'bg-green-100', 'text-green-600', 'border-green-400',
             'bg-red-100', 'text-red-600', 'border-red-400'
         );
 
-        if (totalWeekHours > 30) { // Over 30 hours
+        if (totalWeekHours > 30) {
             totalWeekHoursIndicator.classList.add('bg-red-100', 'text-red-600', 'border-red-400');
-        } else if (totalWeekHours > 0) { // From 1 to 30 hours
+        } else if (totalWeekHours > 0) {
             totalWeekHoursIndicator.classList.add('bg-green-100', 'text-green-600', 'border-green-400');
-        } else { // Empty week
+        } else {
             totalWeekHoursIndicator.classList.add('bg-gray-100', 'text-gray-600', 'border-gray-300');
         }
 
@@ -287,12 +283,31 @@ const runApp = () => {
         };
         const typeClass = typeColors[app.type] || 'bg-gray-100 text-gray-800 border-l-gray-500';
         const patient = patients.find(p => p.id === app.patientId);
+        const comune = patient?.comune || 'Comune non specificato';
+
         return `
             <div class="appointment-item cursor-pointer relative border-l-4 ${typeClass} grid grid-cols-[auto_1fr] gap-x-4 items-baseline" data-id="${app.id}">
                 <p class="py-3 pl-4 font-mono font-semibold text-gray-700 text-sm whitespace-nowrap">${app.startTime} - ${app.endTime}</p>
-                <div class="py-3 pr-4">
+                <div class="py-3 pr-4 flex flex-col min-w-0">
                     <p class="font-bold text-base break-words">${formatPatientName(patient)}</p>
-                    ${app.notes ? `<p class="text-sm text-gray-500 mt-2 pt-2 border-t border-gray-200 flex items-start gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg><span>${app.notes}</span></p>` : ''}
+                    <hr class="my-2 border-gray-200">
+                    <div class="space-y-1">
+                        <p class="text-sm text-gray-500 flex items-start gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span class="truncate">${comune}</span>
+                        </p>
+                        ${app.notes ? `
+                            <p class="text-sm text-gray-500 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                </svg>
+                                <span class="break-words">${app.notes}</span>
+                            </p>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -386,7 +401,7 @@ const runApp = () => {
         const year = currentReportDate.getFullYear();
         const month = currentReportDate.getMonth();
         const monthAppointments = appointments.filter(a => {
-            const aDate = new Date(a.date + 'T00:00:00'); // Treat date as local to avoid TZ issues
+            const aDate = new Date(a.date + 'T00:00:00');
             return aDate.getFullYear() === year && aDate.getMonth() === month;
         });
 
@@ -610,7 +625,6 @@ const runApp = () => {
         }
 
         if (id) {
-            // Edit mode
             const index = patients.findIndex(p => p.id === id);
             if (index > -1) {
                 patients[index].comune = comune;
@@ -621,7 +635,6 @@ const runApp = () => {
                 renderWeek();
             }
         } else {
-            // New mode
             if (lastName) {
                 const existingPatient = patients.find(p =>
                     p.firstName.toLowerCase() === firstName.toLowerCase() &&
@@ -664,333 +677,157 @@ const runApp = () => {
                 patients: patients,
                 appointments: appointments,
             };
-            const dataStr = JSON.stringify(allData, null, 2); // Pretty print for readability
+            const dataStr = JSON.stringify(allData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
             const now = new Date();
             const year = now.getFullYear().toString().slice(-2);
             const month = (now.getMonth() + 1).toString().padStart(2, '0');
             const day = now.getDate().toString().padStart(2, '0');
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const fileName = `oss-hero-${year}${month}${day}-${hours}${minutes}${seconds}.json`;
-            
+            const fileName = `oss-hero-${year}${month}${day}.json`;
             const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.href = url; a.download = fileName;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
             showToast('Dati esportati con successo!');
         } catch (error) {
-            console.error('Errore durante l\'esportazione dei dati:', error);
-            showToast('Si è verificato un errore durante l\'esportazione.', true);
+            showToast('Errore durante l\'esportazione.', true);
         }
     });
 
-    const importLoadingOverlay = document.getElementById('import-loading-overlay');
     const importFileInput = document.getElementById('import-file-input');
-
-    document.getElementById('import-data-btn').addEventListener('click', () => {
-        importFileInput.click();
-    });
+    document.getElementById('import-data-btn').addEventListener('click', () => importFileInput.click());
 
     importFileInput.addEventListener('change', (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
-        const confirmationMessage = "Sei sicuro di voler importare questo file? TUTTI i dati attuali verranno SOSTITUITI. Questa operazione non è reversibile.";
-        
-        openConfirmModal(confirmationMessage, () => {
-            handleImport(file);
-        });
-
-        // Reset the input value to allow selecting the same file again
+        openConfirmModal("Tutti i dati verranno SOSTITUITI. Continuare?", () => handleImport(file));
         importFileInput.value = '';
     });
     
     const handleImport = (file) => {
-        importLoadingOverlay.classList.remove('hidden');
+        const overlay = document.getElementById('import-loading-overlay');
+        overlay.classList.remove('hidden');
         const reader = new FileReader();
-
         reader.onload = (e) => {
-            setTimeout(() => { // Simulate a small delay for better UX
-                try {
-                    const text = e.target?.result;
-                    const data = JSON.parse(text);
-
-                    if (Array.isArray(data.patients) && Array.isArray(data.appointments)) {
-                        patients = data.patients;
-                        appointments = data.appointments;
-                        // Assicuriamo che anche i pazienti importati abbiano il campo comune
-                        patients = patients.map(p => ({ ...p, comune: p.comune || '' }));
-                        saveData();
-                        showToast('Dati importati con successo!');
-                        // Re-render everything
-                        renderWeek();
-                        renderPatients();
-                        renderReport();
-                    } else {
-                        throw new Error("Invalid file structure.");
-                    }
-                } catch (error) {
-                    console.error('Errore durante l\'importazione dei dati:', error);
-                    showToast('File non valido o corrotto. Il formato non è corretto.', true);
-                } finally {
-                    importLoadingOverlay.classList.add('hidden');
+            try {
+                const data = JSON.parse(e.target?.result);
+                if (Array.isArray(data.patients) && Array.isArray(data.appointments)) {
+                    patients = data.patients.map(p => ({ ...p, comune: p.comune || '' }));
+                    appointments = data.appointments;
+                    saveData();
+                    renderWeek(); renderPatients(); renderReport();
+                    showToast('Importazione completata!');
                 }
-            }, 500);
+            } catch (err) {
+                showToast('Errore nell\'importazione file.', true);
+            } finally {
+                overlay.classList.add('hidden');
+            }
         };
-        
-        reader.onerror = () => {
-             setTimeout(() => {
-                showToast('Si è verificato un errore durante la lettura del file.', true);
-                importLoadingOverlay.classList.add('hidden');
-             }, 500);
-        };
-
         reader.readAsText(file);
     };
 
     document.getElementById('delete-week-btn').addEventListener('click', () => {
         const weekStart = getWeekStart(currentDate);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        
         const startStr = formatDate(weekStart);
-        const endStr = formatDate(weekEnd);
-
+        const endStr = formatDate(new Date(weekStart.setDate(weekStart.getDate() + 6)));
         const appsToDelete = appointments.filter(a => a.date >= startStr && a.date <= endStr);
-
-        if (appsToDelete.length === 0) {
-            showToast("Nessun appuntamento da eliminare in questa settimana.");
-            return;
-        }
-
-        openConfirmModal(`Sei sicuro di voler eliminare i ${appsToDelete.length} appuntamenti di questa settimana?`, () => {
-            const idsToDelete = new Set(appsToDelete.map(a => a.id));
-            appointments = appointments.filter(a => !idsToDelete.has(a.id));
-            saveData();
-            showToast("Appuntamenti della settimana eliminati.");
-            renderWeek();
-            renderReport();
+        if (appsToDelete.length === 0) return;
+        openConfirmModal(`Eliminare i ${appsToDelete.length} appuntamenti della settimana?`, () => {
+            const ids = new Set(appsToDelete.map(a => a.id));
+            appointments = appointments.filter(a => !ids.has(a.id));
+            saveData(); renderWeek(); renderReport();
         });
     });
 
     document.body.addEventListener('click', (e) => {
         const target = e.target;
-
         const addBtn = target.closest('.add-appointment-btn');
         if (addBtn) { openAppointmentModal(null, { date: addBtn.dataset.date }); return; }
-
-        const appointmentCard = target.closest('.appointment-item');
-        if (appointmentCard) {
-             const appointmentId = appointmentCard.dataset.id;
-             const clickedAppointment = appointments.find(a => a.id === appointmentId);
-             if (clickedAppointment) {
-                openAppointmentModal(clickedAppointment);
-             }
+        const appCard = target.closest('.appointment-item');
+        if (appCard) {
+             const app = appointments.find(a => a.id === appCard.dataset.id);
+             if (app) openAppointmentModal(app);
              return;
         }
-
         const gapItem = target.closest('.gap-item');
         if (gapItem) {
             const { date, startTime, endTime } = gapItem.dataset;
             openAppointmentModal(null, { date, startTime, endTime });
             return;
         }
-        
-        const deletePatientBtn = target.closest('.delete-patient-btn');
-        if(deletePatientBtn) {
-            const { id } = deletePatientBtn.dataset;
-            if (!id) return;
-            const patientToDelete = patients.find(p => p.id === id);
-            if (!patientToDelete) return;
-            
-            if (patientToDelete.lastName === 'Corsi e riunioni' && patientToDelete.firstName === '') return; // Safety check
-
-            const appCount = appointments.filter(a => a.patientId === id).length;
-            let msg = `Sei sicuro di voler eliminare "${formatPatientName(patientToDelete)}"?`;
-            if(appCount > 0) msg += `\n\nATTENZIONE: Ci sono ${appCount} appuntamenti associati. L'eliminazione del paziente NON eliminerà i suoi appuntamenti.`;
-
-            openConfirmModal(msg, () => {
-                patients = patients.filter(p => p.id !== id);
-                saveData();
-                showToast('Paziente eliminato.');
-                renderPatients();
-                renderWeek(); // Re-render week in case patient names are now "not found"
+        const delPazBtn = target.closest('.delete-patient-btn');
+        if(delPazBtn) {
+            const p = patients.find(p => p.id === delPazBtn.dataset.id);
+            if (!p) return;
+            openConfirmModal(`Eliminare "${formatPatientName(p)}"?`, () => {
+                patients = patients.filter(item => item.id !== p.id);
+                saveData(); renderPatients(); renderWeek();
             });
             return;
         }
-
-        const patientCard = target.closest('.patient-card');
-        if (patientCard && !target.closest('.delete-patient-btn')) {
-            const { id } = patientCard.dataset;
-            const patientToEdit = patients.find(p => p.id === id);
-            if (patientToEdit) {
-                openPatientModal(patientToEdit);
-            }
+        const pCard = target.closest('.patient-card');
+        if (pCard && !target.closest('.delete-patient-btn')) {
+            const p = patients.find(item => item.id === pCard.dataset.id);
+            if (p) openPatientModal(p);
             return;
         }
     });
 
     document.getElementById('suggest-time-btn').addEventListener('click', () => {
         const dateInput = document.getElementById('appointment-date');
-        const startTimeInput = document.getElementById('start-time');
-        const endTimeInput = document.getElementById('end-time');
-        const date = dateInput.value;
-
-        if (!date) {
-            showToast("Seleziona prima una data.", true);
-            return;
-        }
-
-        const spinner = document.getElementById('suggest-spinner');
-        spinner.classList.remove('hidden');
-
-        const minutesToTime = (minutes) => {
-            const h = Math.floor(minutes / 60).toString().padStart(2, '0');
-            const m = (minutes % 60).toString().padStart(2, '0');
-            return `${h}:${m}`;
-        };
-
-        const dayAppointments = appointments.filter(a => a.date === date);
-        const busySlots = dayAppointments.map(a => ({
-            start: timeToMinutes(a.startTime),
-            end: timeToMinutes(a.endTime),
-        }));
-        busySlots.push({ start: timeToMinutes('12:00'), end: timeToMinutes('14:00') });
-        busySlots.sort((a, b) => a.start - b.start);
-
-        const dayStart = timeToMinutes('08:00');
-        const dayEnd = timeToMinutes('18:00');
-        const appointmentDuration = 60;
-        let suggestedStartTime = null;
-
-        const existingStartTime = startTimeInput.value;
-        let searchStartTime;
-        if (existingStartTime) {
-            searchStartTime = timeToMinutes(existingStartTime) + appointmentDuration;
-        } else {
-            searchStartTime = dayStart;
-        }
-
-        let checkTime = searchStartTime;
-
-        while (checkTime <= dayEnd - appointmentDuration) {
-            const slotEnd = checkTime + appointmentDuration;
-            
-            const isBusy = busySlots.some(busy => 
-                checkTime < busy.end && slotEnd > busy.start
-            );
-
-            if (!isBusy) {
-                suggestedStartTime = checkTime;
-                break;
+        const startInput = document.getElementById('start-time');
+        const endInput = document.getElementById('end-time');
+        if (!dateInput.value) { showToast("Seleziona prima una data.", true); return; }
+        const busy = appointments.filter(a => a.date === dateInput.value).map(a => ({ start: timeToMinutes(a.startTime), end: timeToMinutes(a.endTime) }));
+        busy.push({ start: timeToMinutes('12:00'), end: timeToMinutes('14:00') });
+        busy.sort((a,b) => a.start - b.start);
+        let check = startInput.value ? timeToMinutes(startInput.value) + 60 : timeToMinutes('08:00');
+        while (check <= timeToMinutes('18:00') - 60) {
+            if (!busy.some(b => check < b.end && check + 60 > b.start)) {
+                startInput.value = Math.floor(check/60).toString().padStart(2,'0') + ':' + (check%60).toString().padStart(2,'0');
+                endInput.value = Math.floor((check+60)/60).toString().padStart(2,'0') + ':' + ((check+60)%60).toString().padStart(2,'0');
+                return;
             }
-            
-            checkTime++;
+            check++;
         }
-
-        spinner.classList.add('hidden');
-
-        if (suggestedStartTime !== null) {
-            const start = minutesToTime(suggestedStartTime);
-            const end = minutesToTime(suggestedStartTime + appointmentDuration);
-            startTimeInput.value = start;
-            endTimeInput.value = end;
-        } else {
-            if (existingStartTime) {
-                showToast("Nessun altro slot libero trovato per questa giornata.", true);
-            } else {
-                showToast("Nessuno slot libero di 1 ora trovato per questa giornata.", true);
-            }
-        }
+        showToast("Nessun altro slot libero.", true);
     });
 
     document.getElementById('copy-week-options').addEventListener('click', (e) => {
-        const target = e.target;
-        const button = target.closest('[data-weeks-ago]');
-
-        if (!button) return;
-
-        const weeksAgo = parseInt(button.dataset.weeksAgo, 10);
-        if (isNaN(weeksAgo)) return;
-
-        const targetWeekStart = getWeekStart(currentDate);
-
-        const sourceWeekStart = new Date(targetWeekStart);
-        sourceWeekStart.setDate(sourceWeekStart.getDate() - (7 * weeksAgo));
-        const sourceWeekEnd = new Date(sourceWeekStart);
-        sourceWeekEnd.setDate(sourceWeekStart.getDate() + 6);
-        
-        const sourceStartStr = formatDate(sourceWeekStart);
-        const sourceEndStr = formatDate(sourceWeekEnd);
-
-        const sourceAppointments = appointments.filter(a => a.date >= sourceStartStr && a.date <= sourceEndStr);
-
-        if (sourceAppointments.length === 0) {
-            showToast(`Nessun appuntamento trovato ${weeksAgo === 1 ? 'la settimana scorsa' : `${weeksAgo} settimane fa`}.`, true);
-            closeModal(copyWeekModal);
-            return;
-        }
-        
-        const newAppointments = sourceAppointments.map(sourceApp => {
-            const sourceAppDate = new Date(sourceApp.date + 'T00:00:00');
-            const dayOffset = Math.round((sourceAppDate.getTime() - sourceWeekStart.getTime()) / (1000 * 60 * 60 * 24));
-            
-            const newAppDate = new Date(targetWeekStart);
-            newAppDate.setDate(targetWeekStart.getDate() + dayOffset);
-
-            return {
-                ...sourceApp,
-                id: Date.now().toString() + Math.random().toString(),
-                date: formatDate(newAppDate)
-            };
+        const btn = e.target.closest('[data-weeks-ago]');
+        if (!btn) return;
+        const weeksAgo = parseInt(btn.dataset.weeksAgo);
+        const targetStart = getWeekStart(currentDate);
+        const sourceStart = new Date(targetStart); sourceStart.setDate(sourceStart.getDate() - (7 * weeksAgo));
+        const sourceEnd = new Date(sourceStart); sourceEnd.setDate(sourceStart.getDate() + 6);
+        const sourceApps = appointments.filter(a => a.date >= formatDate(sourceStart) && a.date <= formatDate(sourceEnd));
+        if (sourceApps.length === 0) { showToast("Nessun appuntamento da copiare.", true); return; }
+        const newApps = sourceApps.map(s => {
+            const sDate = new Date(s.date + 'T00:00:00');
+            const offset = Math.round((sDate - sourceStart) / 86400000);
+            const nDate = new Date(targetStart); nDate.setDate(targetStart.getDate() + offset);
+            return { ...s, id: Date.now() + Math.random().toString(), date: formatDate(nDate) };
         });
-
-        appointments.push(...newAppointments);
-        saveData();
-        closeModal(copyWeekModal);
-        renderWeek();
-        renderReport();
-        showToast(`${newAppointments.length} appuntamenti copiati con successo!`);
+        appointments.push(...newApps); saveData(); closeModal(copyWeekModal); renderWeek(); renderReport();
     });
 
     navButtons.forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
     document.getElementById('add-patient-btn-view').addEventListener('click', () => openPatientModal());
-    
     document.getElementById('cancel-appointment').addEventListener('click', () => closeModal(appointmentModal));
     document.getElementById('cancel-patient').addEventListener('click', () => closeModal(patientModal));
-    appointmentModal.addEventListener('click', (e) => { if (e.target === appointmentModal) closeModal(appointmentModal); });
-    patientModal.addEventListener('click', (e) => { if (e.target === patientModal) closeModal(patientModal); });
     document.getElementById('cancel-confirm').addEventListener('click', () => closeModal(confirmModal));
     document.getElementById('confirm-action').addEventListener('click', () => { confirmCallback?.(); closeModal(confirmModal); });
-    confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) closeModal(confirmModal); });
     document.getElementById('cancel-copy-week').addEventListener('click', () => closeModal(copyWeekModal));
-    copyWeekModal.addEventListener('click', (e) => { if (e.target === copyWeekModal) closeModal(copyWeekModal); });
     
-    // --- APP START ---
-    loadData();
-    loadingEl.classList.add('hidden');
-    showView('agenda-view');
+    loadData(); loadingEl.classList.add('hidden'); showView('agenda-view');
 
-    // --- PWA Service Worker Registration ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then(registration => {
-                console.log('SW registered: ', registration);
-            }).catch(registrationError => {
-                console.log('SW registration failed: ', registrationError);
-            });
+            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ok')).catch(err => console.log('SW fail'));
         });
     }
 };
 
-// Defer app execution until the DOM is ready to prevent race conditions.
 document.addEventListener('DOMContentLoaded', runApp);
