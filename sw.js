@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE_NAME = 'oss-hero-cache-v5';
+const CACHE_NAME = 'oss-hero-cache-v6';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -14,9 +14,10 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
+        console.log('Opened cache v6');
         return cache.addAll(URLS_TO_CACHE);
       })
+      .then(() => self.skipWaiting()) // Forza il service worker ad attivarsi senza attendere la chiusura delle schede
   );
 });
 
@@ -31,12 +32,9 @@ self.addEventListener('fetch', event => {
         }
         // Altrimenti, la richiede dalla rete
         return fetch(event.request).catch(() => {
-          // Gestione offline per le richieste non in cache (es. API)
-          // In questo caso, per le richieste di navigazione non in cache, non facciamo nulla
-          // Potrebbe essere utile restituire una pagina offline generica qui se necessario
+          // Gestione offline
         });
-      }
-    )
+      })
   );
 });
 
@@ -44,14 +42,18 @@ self.addEventListener('fetch', event => {
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheWhitelist.indexOf(cacheName) === -1) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      self.clients.claim() // Prende il controllo delle pagine aperte immediatamente
+    ])
   );
 });
