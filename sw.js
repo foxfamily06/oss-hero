@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE_NAME = 'oss-hero-cache-v7';
+const CACHE_NAME = 'oss-hero-cache-v8';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -14,7 +14,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v7');
+        console.log('Opened cache v8');
         return cache.addAll(URLS_TO_CACHE);
       })
       .then(() => self.skipWaiting()) // Forza il service worker ad attivarsi senza attendere la chiusura delle schede

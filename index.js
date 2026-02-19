@@ -358,7 +358,7 @@ const runApp = () => {
             patientEl.dataset.id = p.id;
             
             const patientAppointments = appointments
-                .filter(a => a.patientId === p.id && a.date <= todayStr)
+                .filter(a => patient && a.patientId === p.id && a.date <= todayStr)
                 .sort((a, b) => b.date.localeCompare(a.date));
 
             let visitHtml = '<span class="text-xs text-gray-500 mt-1 block">Nessuna visita registrata</span>';
