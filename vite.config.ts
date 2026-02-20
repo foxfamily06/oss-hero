@@ -1,19 +1,15 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
-import tailwindcss from '@tailwindcss/vite';
 
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      base: '/oss-hero/',
       server: {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [
-        tailwindcss(),
-      ],
+      plugins: [],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
