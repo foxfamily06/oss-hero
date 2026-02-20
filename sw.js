@@ -1,11 +1,10 @@
 // sw.js
 
-const CACHE_NAME = 'oss-hero-cache-v11';
+const CACHE_NAME = 'oss-hero-cache-v12';
 const URLS_TO_CACHE = [
   './',
   './index.html',
-  './index.js',
-  './index.css',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
@@ -30,8 +29,17 @@ self.addEventListener('fetch', event => {
         if (response) {
           return response;
         }
-        // Altrimenti, la richiede dalla rete
-        return fetch(event.request).catch(() => {
+        // Altrimenti, la richiede dalla rete e la aggiunge alla cache
+        return fetch(event.request).then(networkResponse => {
+          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+            return networkResponse;
+          }
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+          return networkResponse;
+        }).catch(() => {
           // Gestione offline
         });
       })

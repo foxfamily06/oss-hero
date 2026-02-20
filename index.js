@@ -865,7 +865,7 @@ const runApp = () => {
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW ok')).catch(err => console.log('SW fail'));
+            navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW ok')).catch(err => console.log('SW fail'));
         });
     }
 };
