@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import './index.css';
-
 console.log('OSS Hero: Application starting...');
 
 const runApp = () => {
