@@ -14,6 +14,7 @@ e questo progetto aderisce a [Semantic Versioning](https://semver.org/spec/v2.0.
 - Migliorata la configurazione di Tailwind CSS 4 per garantire la compatibilità con i componenti personalizzati e le classi di utilità.
 - Corretta la configurazione di build per GitHub Pages (base path relativo) per evitare la perdita di stili e colori in produzione.
 - Risolto il problema della visualizzazione errata su smartphone forzando la disattivazione dei vecchi Service Worker e ripristinando il corretto bundling dei CSS tramite Vite.
+- Configurato il `base` path specifico per GitHub Pages (`/oss-hero/`) in `vite.config.ts` per garantire il caricamento corretto di stili, icone e manifest.
 - Ottimizzato il Service Worker (v15) per operare in modalità pass-through durante la fase di risoluzione dei problemi di cache.
 
 ### Added
