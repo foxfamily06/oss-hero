@@ -4,9 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import './index.css';
+
 console.log('OSS Hero: Application starting...');
 
 const runApp = () => {
+    // Forza la disattivazione di vecchi Service Worker che potrebbero bloccare gli stili
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+                registration.unregister();
+            }
+        });
+    }
+
     // --- LOCAL STORAGE KEYS ---
     const APPOINTMENTS_KEY = 'ossHeroAppointments';
     const PATIENTS_KEY = 'ossHeroPatients';
