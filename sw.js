@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE_NAME = 'oss-hero-cache-v12';
+const CACHE_NAME = 'oss-hero-cache-v13';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -8,40 +8,35 @@ const URLS_TO_CACHE = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
-// Installa il service worker e mette in cache le risorse dell'app
+// Installa il service worker e mette in cache le risorse iniziali
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v8');
+        console.log('Opened cache v13');
         return cache.addAll(URLS_TO_CACHE);
       })
-      .then(() => self.skipWaiting()) // Forza il service worker ad attivarsi senza attendere la chiusura delle schede
+      .then(() => self.skipWaiting())
   );
 });
 
-// Intercetta le richieste di rete
+// Strategia Network First: prova la rete, se fallisce usa la cache
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Se la risorsa è in cache, la restituisce
-        if (response) {
-          return response;
-        }
-        // Altrimenti, la richiede dalla rete e la aggiunge alla cache
-        return fetch(event.request).then(networkResponse => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
-          }
+    fetch(event.request)
+      .then(networkResponse => {
+        // Se la risposta è valida, la mettiamo in cache e la restituiamo
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, responseToCache);
           });
-          return networkResponse;
-        }).catch(() => {
-          // Gestione offline
-        });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Se la rete fallisce, prova a cercare nella cache
+        return caches.match(event.request);
       })
   );
 });

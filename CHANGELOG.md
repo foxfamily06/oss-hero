@@ -13,7 +13,7 @@ e questo progetto aderisce a [Semantic Versioning](https://semver.org/spec/v2.0.
 - Ripristinati correttamente gli stili grafici originali dell'applicazione che erano andati persi durante l'aggiornamento a Tailwind CSS 4.
 - Migliorata la configurazione di Tailwind CSS 4 per garantire la compatibilità con i componenti personalizzati e le classi di utilità.
 - Corretta la configurazione di build per GitHub Pages (base path relativo) per evitare la perdita di stili e colori in produzione.
-- Ottimizzato il Service Worker per gestire correttamente gli asset versionati di Vite tramite caching dinamico.
+- Ottimizzato il Service Worker (v13) con strategia "Network First" per garantire che l'applicazione carichi sempre gli stili e gli script più recenti, risolvendo il problema della visualizzazione errata su dispositivi mobili.
 
 ### Added
 - Gestione dello stato dei pazienti (Attivo/Non attivo).
