@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import './index.css';
+
+console.log('OSS Hero: Application starting...');
+
 const runApp = () => {
     // --- LOCAL STORAGE KEYS ---
     const APPOINTMENTS_KEY = 'ossHeroAppointments';
@@ -109,16 +113,19 @@ const runApp = () => {
         if (storedPatients) {
             const loadedPatients = JSON.parse(storedPatients);
             patients = loadedPatients.map(p => {
-                if (p.name !== undefined) {
-                    if (p.name === 'Corsi e riunioni') {
-                        return { id: p.id, firstName: '', lastName: 'Corsi e riunioni', comune: p.comune || '' };
+                let updatedP = { ...p };
+                if (updatedP.active === undefined) updatedP.active = true;
+                
+                if (updatedP.name !== undefined) {
+                    if (updatedP.name === 'Corsi e riunioni') {
+                        return { id: updatedP.id, firstName: '', lastName: 'Corsi e riunioni', comune: updatedP.comune || '', active: updatedP.active };
                     }
-                    const parts = (p.name || '').split(' ').filter(Boolean);
+                    const parts = (updatedP.name || '').split(' ').filter(Boolean);
                     const firstName = parts.shift() || '';
                     const lastName = parts.join(' ');
-                    return { id: p.id, firstName, lastName, comune: p.comune || '' };
+                    return { id: updatedP.id, firstName, lastName, comune: updatedP.comune || '', active: updatedP.active };
                 }
-                return { ...p, comune: p.comune || '' };
+                return { ...updatedP, comune: updatedP.comune || '' };
             });
             saveData();
         } else {
@@ -126,7 +133,8 @@ const runApp = () => {
                 id: Date.now().toString() + Math.random().toString(),
                 firstName: '',
                 lastName: 'Corsi e riunioni',
-                comune: 'Sede'
+                comune: 'Sede',
+                active: true
             }];
             saveData();
         }
@@ -339,26 +347,36 @@ const runApp = () => {
     }
 
     function renderPatients() {
+        console.log('OSS Hero: Rendering patients list...');
         const listEl = document.getElementById('patients-list');
+        const statusFilter = document.getElementById('patient-status-filter').value;
         listEl.innerHTML = '';
-        if (patients.length === 0) {
-             listEl.innerHTML = `<p class="text-gray-500 italic px-2">Nessun paziente aggiunto.</p>`;
+        
+        let filteredPatients = [...patients];
+        if (statusFilter === 'active') {
+            filteredPatients = filteredPatients.filter(p => p.active);
+        } else if (statusFilter === 'inactive') {
+            filteredPatients = filteredPatients.filter(p => !p.active);
+        }
+
+        if (filteredPatients.length === 0) {
+             listEl.innerHTML = `<p class="text-gray-500 italic px-2">Nessun paziente trovato con questo filtro.</p>`;
              return;
         }
     
         const todayStr = formatDate(new Date());
 
-        [...patients].sort((a,b) => {
+        filteredPatients.sort((a,b) => {
             const lastNameComp = a.lastName.localeCompare(b.lastName);
             if (lastNameComp !== 0) return lastNameComp;
             return a.firstName.localeCompare(b.firstName);
         }).forEach(p => {
             const patientEl = document.createElement('div');
-            patientEl.className = 'card flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors patient-card';
+            patientEl.className = `card flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors patient-card ${(!p.active && statusFilter === 'all') ? 'opacity-60' : ''}`;
             patientEl.dataset.id = p.id;
             
             const patientAppointments = appointments
-                .filter(a => patient && a.patientId === p.id && a.date <= todayStr)
+                .filter(a => a.patientId === p.id && a.date <= todayStr)
                 .sort((a, b) => b.date.localeCompare(a.date));
 
             let visitHtml = '<span class="text-xs text-gray-500 mt-1 block">Nessuna visita registrata</span>';
@@ -379,7 +397,10 @@ const runApp = () => {
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 self-start shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                     <div>
-                        <span class="font-medium">${formatPatientName(p)}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium">${formatPatientName(p)}</span>
+                            ${!p.active ? '<span class="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded">Inattivo</span>' : ''}
+                        </div>
                         <span class="text-xs text-blue-600 block">${p.comune ? p.comune : 'Comune non specificato'}</span>
                         ${visitHtml}
                     </div>
@@ -475,7 +496,13 @@ const runApp = () => {
         
         const patientSelect = document.getElementById('patient-select');
         patientSelect.innerHTML = '<option value="">Seleziona un paziente...</option>';
-        [...patients].sort((a,b) => {
+        
+        // Filter patients: show all if editing, only active if new
+        const patientsToShow = appointment 
+            ? patients 
+            : patients.filter(p => p.active);
+
+        [...patientsToShow].sort((a,b) => {
             const lastNameComp = a.lastName.localeCompare(b.lastName);
             if (lastNameComp !== 0) return lastNameComp;
             return a.firstName.localeCompare(b.firstName);
@@ -522,6 +549,7 @@ const runApp = () => {
         const firstNameInput = document.getElementById('patient-firstname');
         const lastNameInput = document.getElementById('patient-lastname');
         const comuneInput = document.getElementById('patient-comune');
+        const activeInput = document.getElementById('patient-active');
 
         if (patientToEdit) {
             idInput.value = patientToEdit.id;
@@ -530,6 +558,7 @@ const runApp = () => {
             firstNameInput.value = patientToEdit.firstName;
             lastNameInput.value = patientToEdit.lastName;
             comuneInput.value = patientToEdit.comune || '';
+            activeInput.checked = patientToEdit.active !== undefined ? patientToEdit.active : true;
             
             firstNameInput.disabled = true;
             lastNameInput.disabled = true;
@@ -537,6 +566,7 @@ const runApp = () => {
             idInput.value = '';
             titleEl.textContent = 'Nuovo Paziente';
             submitBtnText.textContent = 'Aggiungi';
+            activeInput.checked = true;
             firstNameInput.disabled = false;
             lastNameInput.disabled = false;
         }
@@ -594,6 +624,7 @@ const runApp = () => {
         saveData();
         closeModal(appointmentModal);
         renderWeek();
+        renderPatients();
         renderReport();
     });
 
@@ -608,6 +639,7 @@ const runApp = () => {
             showToast('Appuntamento eliminato.');
             closeModal(appointmentModal);
             renderWeek();
+            renderPatients();
             renderReport();
          });
     });
@@ -618,6 +650,7 @@ const runApp = () => {
         const firstName = document.getElementById('patient-firstname').value.trim();
         const lastName = document.getElementById('patient-lastname').value.trim();
         const comune = document.getElementById('patient-comune').value.trim();
+        const active = document.getElementById('patient-active').checked;
 
         if (!comune) {
             showToast('Il comune di residenza è obbligatorio.', true);
@@ -628,6 +661,7 @@ const runApp = () => {
             const index = patients.findIndex(p => p.id === id);
             if (index > -1) {
                 patients[index].comune = comune;
+                patients[index].active = active;
                 saveData();
                 showToast('Paziente aggiornato!');
                 closeModal(patientModal);
@@ -650,7 +684,8 @@ const runApp = () => {
                     id: Date.now().toString() + Math.random().toString(),
                     firstName,
                     lastName,
-                    comune
+                    comune,
+                    active
                 };
                 patients.push(newPatient);
                 saveData();
@@ -670,6 +705,7 @@ const runApp = () => {
     document.getElementById('next-month').addEventListener('click', () => { currentReportDate.setMonth(currentReportDate.getMonth() + 1); renderReport(); });
     document.getElementById('goto-current-month-btn').addEventListener('click', () => { currentReportDate = new Date(); renderReport(); });
     document.getElementById('copy-week-btn').addEventListener('click', openCopyWeekModal);
+    document.getElementById('patient-status-filter').addEventListener('change', renderPatients);
 
     document.getElementById('export-data-btn').addEventListener('click', () => {
         try {
@@ -713,7 +749,11 @@ const runApp = () => {
             try {
                 const data = JSON.parse(e.target?.result);
                 if (Array.isArray(data.patients) && Array.isArray(data.appointments)) {
-                    patients = data.patients.map(p => ({ ...p, comune: p.comune || '' }));
+                    patients = data.patients.map(p => ({ 
+                        ...p, 
+                        comune: p.comune || '', 
+                        active: p.active !== undefined ? p.active : true 
+                    }));
                     appointments = data.appointments;
                     saveData();
                     renderWeek(); renderPatients(); renderReport();

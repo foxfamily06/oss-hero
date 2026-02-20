@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE_NAME = 'oss-hero-cache-v8';
+const CACHE_NAME = 'oss-hero-cache-v11';
 const URLS_TO_CACHE = [
   './',
   './index.html',
