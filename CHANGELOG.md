@@ -5,6 +5,11 @@ Tutte le modifiche degne di nota a questo progetto saranno documentate in questo
 Il formato è basato su [Keep a Changelog](https://keepachangelog.com/it/1.1.0/)
 e questo progetto aderisce a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-02-20
+
+### Fixed
+- Risolto un errore `ReferenceError: patient is not defined` nella visualizzazione dell'elenco pazienti.
+
 ## [1.2.0] - 2024-05-24
 
 ### Added
