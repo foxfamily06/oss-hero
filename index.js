@@ -109,16 +109,17 @@ const runApp = () => {
         if (storedPatients) {
             const loadedPatients = JSON.parse(storedPatients);
             patients = loadedPatients.map(p => {
+                const basePatient = { ...p, comune: p.comune || '', isActive: p.isActive !== undefined ? p.isActive : true };
                 if (p.name !== undefined) {
                     if (p.name === 'Corsi e riunioni') {
-                        return { id: p.id, firstName: '', lastName: 'Corsi e riunioni', comune: p.comune || '' };
+                        return { id: p.id, firstName: '', lastName: 'Corsi e riunioni', comune: basePatient.comune, isActive: basePatient.isActive };
                     }
                     const parts = (p.name || '').split(' ').filter(Boolean);
                     const firstName = parts.shift() || '';
                     const lastName = parts.join(' ');
-                    return { id: p.id, firstName, lastName, comune: p.comune || '' };
+                    return { id: p.id, firstName, lastName, comune: basePatient.comune, isActive: basePatient.isActive };
                 }
-                return { ...p, comune: p.comune || '' };
+                return basePatient;
             });
             saveData();
         } else {
@@ -126,7 +127,8 @@ const runApp = () => {
                 id: Date.now().toString() + Math.random().toString(),
                 firstName: '',
                 lastName: 'Corsi e riunioni',
-                comune: 'Sede'
+                comune: 'Sede',
+                isActive: true
             }];
             saveData();
         }
@@ -340,21 +342,30 @@ const runApp = () => {
 
     function renderPatients() {
         const listEl = document.getElementById('patients-list');
+        const statusFilter = document.getElementById('patient-status-filter').value;
         listEl.innerHTML = '';
-        if (patients.length === 0) {
-             listEl.innerHTML = `<p class="text-gray-500 italic px-2">Nessun paziente aggiunto.</p>`;
+        
+        let filteredPatients = [...patients];
+        if (statusFilter === 'active') {
+            filteredPatients = filteredPatients.filter(p => p.isActive);
+        } else if (statusFilter === 'inactive') {
+            filteredPatients = filteredPatients.filter(p => !p.isActive);
+        }
+
+        if (filteredPatients.length === 0) {
+             listEl.innerHTML = `<p class="text-gray-500 italic px-2">Nessun paziente trovato.</p>`;
              return;
         }
     
         const todayStr = formatDate(new Date());
 
-        [...patients].sort((a,b) => {
+        filteredPatients.sort((a,b) => {
             const lastNameComp = a.lastName.localeCompare(b.lastName);
             if (lastNameComp !== 0) return lastNameComp;
             return a.firstName.localeCompare(b.firstName);
         }).forEach(p => {
             const patientEl = document.createElement('div');
-            patientEl.className = 'card flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors patient-card';
+            patientEl.className = `card flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors patient-card ${!p.isActive ? 'opacity-60' : ''}`;
             patientEl.dataset.id = p.id;
             
             const patientAppointments = appointments
@@ -374,13 +385,18 @@ const runApp = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                 </button>`
                 : '';
+            
+            const inactiveBadge = !p.isActive ? '<span class="ml-2 px-2 py-0.5 rounded-full bg-gray-50 text-gray-400 text-[9px] font-medium border border-gray-200 uppercase tracking-wider">Inattivo</span>' : '';
                 
             patientEl.innerHTML = `
                 <div class="flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500 self-start shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${p.isActive ? 'text-blue-500' : 'text-gray-400'} self-start shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                     <div>
-                        <span class="font-medium">${formatPatientName(p)}</span>
-                        <span class="text-xs text-blue-600 block">${p.comune ? p.comune : 'Comune non specificato'}</span>
+                        <div class="flex items-center">
+                            <span class="font-medium ${!p.isActive ? 'text-gray-500' : ''}">${formatPatientName(p)}</span>
+                            ${inactiveBadge}
+                        </div>
+                        <span class="text-xs ${p.isActive ? 'text-blue-600' : 'text-gray-400'} block">${p.comune ? p.comune : 'Comune non specificato'}</span>
                         ${visitHtml}
                     </div>
                 </div>
@@ -480,7 +496,10 @@ const runApp = () => {
             if (lastNameComp !== 0) return lastNameComp;
             return a.firstName.localeCompare(b.firstName);
         }).forEach(p => {
-            patientSelect.innerHTML += `<option value="${p.id}">${formatPatientName(p)}</option>`;
+            // Show only active patients OR the patient currently assigned to the appointment (even if inactive)
+            if (p.isActive || (appointment && appointment.patientId === p.id)) {
+                patientSelect.innerHTML += `<option value="${p.id}">${formatPatientName(p)}</option>`;
+            }
         });
 
         if (appointment) {
@@ -522,6 +541,7 @@ const runApp = () => {
         const firstNameInput = document.getElementById('patient-firstname');
         const lastNameInput = document.getElementById('patient-lastname');
         const comuneInput = document.getElementById('patient-comune');
+        const activeInput = document.getElementById('patient-active');
 
         if (patientToEdit) {
             idInput.value = patientToEdit.id;
@@ -530,6 +550,7 @@ const runApp = () => {
             firstNameInput.value = patientToEdit.firstName;
             lastNameInput.value = patientToEdit.lastName;
             comuneInput.value = patientToEdit.comune || '';
+            activeInput.checked = patientToEdit.isActive !== undefined ? patientToEdit.isActive : true;
             
             firstNameInput.disabled = true;
             lastNameInput.disabled = true;
@@ -537,6 +558,7 @@ const runApp = () => {
             idInput.value = '';
             titleEl.textContent = 'Nuovo Paziente';
             submitBtnText.textContent = 'Aggiungi';
+            activeInput.checked = true;
             firstNameInput.disabled = false;
             lastNameInput.disabled = false;
         }
@@ -618,6 +640,7 @@ const runApp = () => {
         const firstName = document.getElementById('patient-firstname').value.trim();
         const lastName = document.getElementById('patient-lastname').value.trim();
         const comune = document.getElementById('patient-comune').value.trim();
+        const isActive = document.getElementById('patient-active').checked;
 
         if (!comune) {
             showToast('Il comune di residenza è obbligatorio.', true);
@@ -628,6 +651,7 @@ const runApp = () => {
             const index = patients.findIndex(p => p.id === id);
             if (index > -1) {
                 patients[index].comune = comune;
+                patients[index].isActive = isActive;
                 saveData();
                 showToast('Paziente aggiornato!');
                 closeModal(patientModal);
@@ -650,7 +674,8 @@ const runApp = () => {
                     id: Date.now().toString() + Math.random().toString(),
                     firstName,
                     lastName,
-                    comune
+                    comune,
+                    isActive
                 };
                 patients.push(newPatient);
                 saveData();
@@ -670,6 +695,7 @@ const runApp = () => {
     document.getElementById('next-month').addEventListener('click', () => { currentReportDate.setMonth(currentReportDate.getMonth() + 1); renderReport(); });
     document.getElementById('goto-current-month-btn').addEventListener('click', () => { currentReportDate = new Date(); renderReport(); });
     document.getElementById('copy-week-btn').addEventListener('click', openCopyWeekModal);
+    document.getElementById('patient-status-filter').addEventListener('change', renderPatients);
 
     document.getElementById('export-data-btn').addEventListener('click', () => {
         try {
@@ -713,7 +739,11 @@ const runApp = () => {
             try {
                 const data = JSON.parse(e.target?.result);
                 if (Array.isArray(data.patients) && Array.isArray(data.appointments)) {
-                    patients = data.patients.map(p => ({ ...p, comune: p.comune || '' }));
+                    patients = data.patients.map(p => ({ 
+                        ...p, 
+                        comune: p.comune || '', 
+                        isActive: p.isActive !== undefined ? p.isActive : true 
+                    }));
                     appointments = data.appointments;
                     saveData();
                     renderWeek(); renderPatients(); renderReport();

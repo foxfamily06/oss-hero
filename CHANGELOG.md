@@ -5,6 +5,20 @@ Tutte le modifiche degne di nota a questo progetto saranno documentate in questo
 Il formato è basato su [Keep a Changelog](https://keepachangelog.com/it/1.1.0/)
 e questo progetto aderisce a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-02-21
+
+### Changed
+- Migliorata la veste grafica dei pazienti inattivi: icona desaturata, badge "Inattivo" in stile pillola raffinata e colori attenuati per nome e comune.
+
+## [1.3.0] - 2026-02-21
+
+### Added
+- Gestione dello stato dei pazienti (Attivo/Inattivo).
+- Filtro nella lista pazienti per visualizzare "Attivi", "Non attivi" o "Tutti".
+- I pazienti inattivi sono ora esclusi dal menu a tendina della creazione appuntamenti.
+- Visualizzazione differenziata per i pazienti inattivi (opacità ridotta e badge "Inattivo").
+- Il campo `isActive` è incluso nelle operazioni di importazione ed esportazione JSON.
+
 ## [1.2.1] - 2026-02-20
 
 ### Fixed
